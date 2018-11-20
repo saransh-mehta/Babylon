@@ -19,7 +19,7 @@ This folder has following files:
 2. `tex2ctf_mod.py`: The file to dump the data in Microsoft CNTK format. This is the modified version of file in `/baselines`. Following is the list of arguments:
 
 ```bash
---mode: 	     operation mode, FULL for complete dump, SAMPLE for first 3000 lines
+--mode:          operation mode, FULL for complete dump, SAMPLE for first 3000 lines
 --train-file:    path to training file
 --valid-file:    path to validation file
 --eval-file:     path to evaluation file
