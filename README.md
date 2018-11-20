@@ -1,7 +1,7 @@
 # Babylon
 
 ## Get Glove dataset
-Download Glove Embeddings from here `http://nlp.stanford.edu/data/glove.6B.zip`
+Download Glove Embeddings from [here](http://nlp.stanford.edu/data/glove.6B.zip)
 
 ## Run
 To create the training and validation data run the following commands from `/common/split_data.py` (this process may take some time). This will create two new files `path/to/output/file/name_train.txt` and `path/to/output/file/name_validation.txt`:
