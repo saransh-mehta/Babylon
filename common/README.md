@@ -29,3 +29,9 @@ This folder has following files:
 --prefix:        prefix for this dump iteration
 --verbose:       verbosity, (True for yes)
 ```
+3. `glove2npy.py`: The file to convert the given glove files to numpy format `*.npy` file. Following is the list of arguments:
+
+```
+  --file-path   path to training file
+  --output-name data file is output_name.npy, word file as output_name_words.txt
+```
