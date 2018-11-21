@@ -1,5 +1,5 @@
 '''
-code to perform split on the giant trianing dataset
+code to perform split on the giant training dataset
 '''
 import argparse
 import numpy as np
@@ -22,8 +22,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--file-path', type = str, help = 'path to training file')
     parser.add_argument('--output-name', type = str, help = 'prefix for output file name, training file is output_name_train.txt')
+    parser.add_argument('--num-sentences', type = int, default = 1000000, help = 'number of sentences in output training file')
     parser.add_argument('--ratio', type = float, default = 0.1, help = 'split ratio (val/total)')
-    parser.add_argument('--randomize', type = bool, default = True, help = 'to randomise data. if selected random points ')
+    parser.add_argument('--randomize', type = bool, default = True, help = 'to randomise data. if True random points are selected')
     args = parser.parse_args()
 
     # get number of lines
@@ -36,20 +37,34 @@ if __name__ == '__main__':
     print('[*] Total number of validation points:', num_val)
 
     # get validation indices
+    print('[*] Getting validation indices')
     all_indices = np.arange(num_lines)
     if args.randomize:
         np.random.shuffle(all_indices)
 
     # get training and validaton indices
     val_indices = all_indices[:num_val]
-    train_indices = np.array([i for i in range(num_lines) if not i in val_indices])
+    del all_indices
 
     # open file and iterate
+    line_num = 0; file_num = 0
     f = open(args.file_path, 'r')
-    ft = open(args.output_name + '_train.txt', 'w')
+    ft = open(args.output_name + '_train{0}.txt'.format(file_num), 'w')
     fv = open(args.output_name + '_validation.txt', 'w')
-    line_num = 0
+    print('[!] Processing starting...')
     while line_num < num_lines:
+        # verbose
+        if line_num % 100000 == 0:
+            print('[#] Processed {0} lines'.format(line_num))
+
+        # new files
+        if line_num % args.num_sentences == 0:
+            print('[!] Closing file,', args.output_name + '_train{0}.txt'.format(file_num))
+            ft.close()
+            file_num += 1
+            print('[!] Opening new file,', args.output_name + '_train{0}.txt'.format(file_num))
+            ft = open(args.output_name + '_train{0}.txt'.format(file_num), 'w')
+
         line = f.readline()
         if line_num in val_indices:
             fv.write(line)
