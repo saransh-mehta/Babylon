@@ -30,89 +30,89 @@ class multi_kernel_cnn:
 		self.numFilters = numFilters #no. of feature maps (filters)
 
 
- 		# we will write the model in init so that we can simply call
- 		# the class to initialize the graph
+		# we will write the model in init so that we can simply call
+		# the class to initialize the graph
 
- 		#placeholders
- 		with tf.name_scope('inp_placeholders') as scope:
+		#placeholders
+		with tf.name_scope('inp_placeholders') as scope:
 
- 			self.x = tf.placeholder(shape = [self.batchSize, self.maxLength],
- 								name = 'inp_x', dtype = tf.int32)
- 			self.y = tf.placeholder(shape = [self.batchSize, 1], name = 'target_y',
- 								dtype = tf.int32)
- 			self.keepProb = tf.placeholder(dtype = tf.float32, name='dropout')
- 			#dropout ratio has to be a placeholder
- 			# which will be fed value at training like x
+			self.x = tf.placeholder(shape = [self.batchSize, self.maxLength],
+								name = 'inp_x', dtype = tf.int32)
+			self.y = tf.placeholder(shape = [self.batchSize, 1], name = 'target_y',
+								dtype = tf.int32)
+			self.keepProb = tf.placeholder(dtype = tf.float32, name='dropout')
+			#dropout ratio has to be a placeholder
+			# which will be fed value at training like x
 
- 			self.embedding_matrix = tf.constant(emb, name = 'embedding_matrix', dtype = tf.float32)
+			self.embedding_matrix = tf.constant(emb, name = 'embedding_matrix', dtype = tf.float32)
 
- 		with tf.name_scope('embedding') as scope:
- 			xEmbed = tf.nn.embedding_lookup(self.embedding_matrix, self.x)
+		with tf.name_scope('embedding') as scope:
+			xEmbed = tf.nn.embedding_lookup(self.embedding_matrix, self.x)
 
- 		pooledOutputList = []
- 		for i, filterSize in enumerate(filterSizes):
+		pooledOutputList = []
+		for i, filterSize in enumerate(filterSizes):
 
- 			with tf.name_scope('CNN_filter_size_%s'%filterSize) as scope:
+			with tf.name_scope('CNN_filter_size_%s'%filterSize) as scope:
 
- 				# as filter shape also needs to be a tensor
- 				filterr = tf.Variable(tf.truncated_normal([filterSize, 
- 														  embedDims, 1, numFilters],
- 														  stddev=0.1),name='filter')
- 				conv1 = tf.nn.conv2d(
- 					self.x, filter=filterr,strides=[1,1,1,1],padding='VALID',name='conv1')
- 				# as in our model our kernal size would convolute the 
- 				# whole embedding for a word.
+				# as filter shape also needs to be a tensor
+				filterr = tf.Variable(tf.truncated_normal([filterSize, 
+														  embedDims, 1, numFilters],
+														  stddev=0.1),name='filter')
+				conv1 = tf.nn.conv2d(
+					self.x, filter=filterr,strides=[1,1,1,1],padding='VALID',name='conv1')
+				# as in our model our kernal size would convolute the 
+				# whole embedding for a word.
 
- 				#convolving with VALID padding means, we slide without adding
- 				#padding to the edges, hence we get the output dimension as
- 				# [1, maxLength - filterSize +1, 1,1]
+				#convolving with VALID padding means, we slide without adding
+				#padding to the edges, hence we get the output dimension as
+				# [1, maxLength - filterSize +1, 1,1]
 
- 				#adding activation and bias for non-linearity
- 				b = tf.Variable(tf.constant(0.1, shape=[numFilters],name='bias'))
- 				activation1 = tf.nn.relu(
- 					tf.nn.bias_add(conv1, b), name='relu_actv')
+				#adding activation and bias for non-linearity
+				b = tf.Variable(tf.constant(0.1, shape=[numFilters],name='bias'))
+				activation1 = tf.nn.relu(
+					tf.nn.bias_add(conv1, b), name='relu_actv')
 
- 				# maxpool
- 				maxPooled = tf.nn.max_pool(
- 					activation1, ksize= [1, maxLength - filterSize +1, 1,1],
- 					strides = [1,1,1,1], padding='VALID', name='max_pool1')
- 				#Performing max-pooling over the output of a specific filter size
- 				#leaves us with a tensor of shape [batch_size, 1, 1, num_filters].
- 				#This is essentially a feature vector, where the last dimension 
- 				#corresponds to our features
+				# maxpool
+				maxPooled = tf.nn.max_pool(
+					activation1, ksize= [1, maxLength - filterSize +1, 1,1],
+					strides = [1,1,1,1], padding='VALID', name='max_pool1')
+				#Performing max-pooling over the output of a specific filter size
+				#leaves us with a tensor of shape [batch_size, 1, 1, num_filters].
+				#This is essentially a feature vector, where the last dimension 
+				#corresponds to our features
 
- 				# here we need to combine the maxPooled output for all the 
- 				# different filter size that we use, hence we will apend the
- 				# output into a list
- 				pooledOutputList.append(maxPooled)
+				# here we need to combine the maxPooled output for all the 
+				# different filter size that we use, hence we will apend the
+				# output into a list
+				pooledOutputList.append(maxPooled)
 
- 		#combining the pooled output for different filters
- 		self.finalPoolOut = tf.concat(pooledOutputList, axis = 3)
- 		totalFiltersNum = numFilters * len(filterSizes)
- 		self.finalPoolOutFlatten = tf.reshape(self.finalPoolOut, [-1,totalFiltersNum])
+		#combining the pooled output for different filters
+		self.finalPoolOut = tf.concat(pooledOutputList, axis = 3)
+		totalFiltersNum = numFilters * len(filterSizes)
+		self.finalPoolOutFlatten = tf.reshape(self.finalPoolOut, [-1,totalFiltersNum])
 
- 		#dropout in fully connected layer
- 		with tf.name_scope('dropout') as scope:
- 			self.dropoutLayer = tf.nn.dropout(self.finalPoolOutFlatten, self.keepProb)
+		#dropout in fully connected layer
+		with tf.name_scope('dropout') as scope:
+			self.dropoutLayer = tf.nn.dropout(self.finalPoolOutFlatten, self.keepProb)
 
- 		with tf.name_scope('out_layer') as scope:
- 			self.finalOut = tf.layers.dense(self.dropoutLayer,units=classNum,name='final_output')
- 			self.predictions = tf.argmax(self.finalOut, 1, name='predictions')
- 		
- 		with tf.name_scope('loss') as scope:
- 			losses = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.finalOut,labels=self.y))
- 			self.loss = tf.reduce_mean(losses)
+		with tf.name_scope('out_layer') as scope:
+			self.finalOut = tf.layers.dense(self.dropoutLayer,units=classNum,name='final_output')
+			self.predictions = tf.argmax(self.finalOut, 1, name='predictions')
+		
+		with tf.name_scope('loss') as scope:
+			losses = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.finalOut,labels=self.y))
+			self.loss = tf.reduce_mean(losses)
 
- 		with tf.name_scope('train') as  scope:
- 			optimizer = tf.train.AdamOptimizer()
- 			self.train = optimizer.minimize(self.loss)
- 		
- 		with tf.name_scope('accuracy') as scope:
- 			correctPrediction = tf.equal(tf.argmax(self.finalOut, axis = 1), tf.argmax(self.y, axis = 1))
- 			self.accuracy = tf.reduce_mean(tf.cast(correctPrediction, tf.float32)) * 100
+		with tf.name_scope('train') as  scope:
+			optimizer = tf.train.AdamOptimizer()
+			self.train = optimizer.minimize(self.loss)
+		
+		with tf.name_scope('accuracy') as scope:
+			correctPrediction = tf.equal(tf.argmax(self.finalOut, axis = 1), tf.argmax(self.y, axis = 1))
+			self.accuracy = tf.reduce_mean(tf.cast(correctPrediction, tf.float32)) * 100
 
- 		with tf.name_scope('confusion_matrix') as scope:
- 			self.confMatrix = tf.confusion_matrix(labels=tf.argmax(self.y,axis=1), predictions=tf.argmax(self.finalOut, axis = 1), num_classes=classNum)
+		with tf.name_scope('confusion_matrix') as scope:
+			self.confMatrix = tf.confusion_matrix(labels=tf.argmax(self.y,axis=1), predictions=tf.argmax(self.finalOut, axis = 1), num_classes=classNum)
 
 
 
